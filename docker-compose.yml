@@ -1,6 +1,43 @@
 version: '3.8'
 
+volumes:
+  pgdata:
+
+networks:
+  backend:
+
 services:
+  postgredb:
+    image: postgres:latest
+    environment:
+      - POSTGRES_DB=netology_smart_home
+      - POSTGRES_USER=admin1
+      - POSTGRES_PASSWORD=admin1pwd
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U admin1 -d netology_smart_home" ]
+      interval: 1m30s
+      timeout: 30s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+    volumes:
+      - ./logs:/var/log
+      - .:/docker-entrypoint-initdb.d
+      - pgdata:/var/lib/posgresql/data
+    networks:
+      - backend
+  nginx_service:
+    image: nginx
+    volumes:
+      - ./templates:/etc/nginx/templates
+    ports:
+      - "8080:80"
+    environment:
+      - NGINX_HOST=foobar.com
+      - NGINX_PORT=80
+    networks:
+      backend:
+
   web:
     build: .
     command: python manage.py runserver 0.0.0.0:8080
@@ -10,3 +47,5 @@ services:
       - 8000:8080
     env_file:
       - ./.env.dev
+    networks:
+      - backend
